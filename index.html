@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UGNAY Survey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .transition-all {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+
+<body class="bg-zinc-50 text-zinc-900 font-sans min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Progress Bar -->
+    <div class="w-full bg-zinc-200 h-1.5 fixed top-0 left-0 z-50">
+        <div id="progressBar" class="bg-black h-1.5 w-0 transition-all duration-300"></div>
+    </div>
+
+    <!-- Survey Container -->
+    <main class="max-w-3xl mx-auto w-full flex-grow flex flex-col justify-center px-6 py-20 relative min-h-screen"
+        id="app">
+        <!-- JavaScript will render the survey steps here -->
+    </main>
+
+    <!-- Footer Navigation -->
+    <footer
+        class="p-6 flex justify-between items-center text-xs text-zinc-400 bg-white fixed bottom-0 w-full border-t border-zinc-100 z-50">
+        <div>UGNAY Capstone Study</div>
+        <div class="flex gap-4">
+            <button onclick="prevStep()" class="hover:text-black font-medium">▲ Prev</button>
+            <button onclick="nextStep()" class="hover:text-black font-medium">▼ Next</button>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE ---
+        const DATABASE_URL = "https://script.google.com/macros/s/AKfycbz20h4lyOtpsO4FrVJ92eg8_A_hq755HIxxIrpsYKRER7zjsRiRJzOR1gNw0Iy9wARkdA/exec";
+
+        // --- 2. SURVEY DATA STRUCTURE ---
+        const surveyData = [
+            {
+                id: 'welcome',
+                type: 'info',
+                title: 'UGNAY Survey Questionnaire',
+                desc: `Good day!<br><br>We are Bachelor of Science in Information Technology (BSIT) students conducting a capstone study entitled <strong>'UGNAY: An Offline Local Communication Application Using a Local Wi‑Fi Network.'</strong><br><br>This survey aims to determine the communication challenges people experience during internet or mobile network interruptions and to assess the need, usefulness, and acceptance of the proposed UGNAY application. Your responses will help us improve the design of the system.<br><br>Participation is voluntary. Your responses are anonymous and will be used solely for academic purposes.`,
+                buttonText: 'Start Survey'
+            },
+            { id: 'Q1_Occupation', section: 'Section I – Respondent Information', type: 'radio', question: '1. Occupation', options: ['Student', 'Employee', 'Government Employee', 'Business Owner', 'Self-Employed', 'Other'] },
+            { id: 'Q2_Smartphone', type: 'radio', question: '2. Do you own a smartphone?', options: ['Yes', 'No'] },
+            { id: 'Q3_OS', type: 'radio', question: '3. Primary mobile operating system:', options: ['Android', 'iPhone (iOS)'] },
+            { id: 'Q4_Messaging_Freq', type: 'radio', question: '4. How often do you use messaging applications?', options: ['Several times a day', 'Once a day', 'Several times a week', 'Rarely'] },
+            { id: 'Q5_Primary_App', type: 'radio', question: '5. Which messaging application do you use most often?', options: ['Messenger', 'WhatsApp', 'Telegram', 'Viber', 'Discord', 'SMS', 'Other'] },
+            { id: 'Q6_Location_Type', type: 'radio', question: '6. Which best describes the area where you usually use your mobile phone?', options: ['Urban', 'Suburban', 'Rural', 'Mountainous', 'Coastal'] },
+            { id: 'Q7_Interruptions', section: 'Section II – Communication Experience', type: 'radio', question: '7. Have you experienced internet or mobile signal interruptions that prevented communication?', options: ['Yes', 'No'] },
+            { id: 'Q8_Poor_Signal_Freq', type: 'radio', question: '8. How often do you experience poor or unstable internet/mobile signal?', options: ['Very Often', 'Often', 'Sometimes', 'Rarely', 'Never'] },
+            { id: 'Q9_Signal_Reliability', type: 'radio', question: '9. How reliable is the internet/mobile signal in your area?', options: ['Very Reliable', 'Reliable', 'Sometimes Unstable', 'Often Unstable', 'Very Poor'] },
+            { id: 'Q10_Problem_Situations', type: 'checkbox', question: '10. In what situations have you experienced communication problems? (Select all that apply)', options: ['Power outages', 'Natural disasters', 'Remote areas', 'Inside buildings', 'Crowded events', 'Travel', 'Other'] },
+            { id: 'Q11_Offline_Comm_Importance', type: 'radio', question: '11. How important is communicating with nearby people when internet/cellular service is unavailable?', options: ['Very Important', 'Important', 'Neutral', 'Slightly Important', 'Not Important'] },
+            {
+                id: 'info-sec3',
+                type: 'info',
+                section: 'Section III – Evaluation of UGNAY',
+                title: 'Evaluation of UGNAY',
+                desc: 'UGNAY allows nearby users connected to the same local Wi‑Fi network to exchange messages without requiring an internet connection.<br><br>For the following statements, please rate using:<br><br><strong>5</strong> - Strongly Agree<br><strong>4</strong> - Agree<br><strong>3</strong> - Neutral<br><strong>2</strong> - Disagree<br><strong>1</strong> - Strongly Disagree',
+                buttonText: 'Continue'
+            },
+            { id: 'Q12_Useful_During_Outages', type: 'likert', question: '12. UGNAY would be useful during internet or mobile network outages.' },
+            { id: 'Q13_Will_Use_Offline', type: 'likert', question: '13. I would use UGNAY when internet access is unavailable.' },
+            { id: 'Q14_Improve_Local_Comm', type: 'likert', question: '14. UGNAY could improve communication in schools, workplaces, and communities.' },
+            { id: 'Q15_Beneficial_Concept', type: 'likert', question: '15. Communicating over a shared local Wi‑Fi network without internet would be beneficial.' },
+            { id: 'Q16_Meets_Needs', type: 'likert', question: '16. The proposed features of UGNAY meet my communication needs.' },
+            { id: 'Q17_Willing_To_Install', type: 'likert', question: '17. I am willing to install and use UGNAY if it is available.' },
+            { id: 'Q18_Important_Features', section: 'Section IV – Feature Preferences', type: 'checkbox', max: 3, question: '18. Which features are most important to you? (Select up to 3)', options: ['Private Messaging', 'Public Chat', 'Nearby User Detection', 'Group Chat', 'Emergency Broadcast', 'File Sharing', 'Message Encryption', 'Message History', 'Easy-to-use Interface'] },
+            { id: 'Q19_Usage_Situations', type: 'checkbox', question: '19. In which situations would you most likely use UGNAY?', options: ['School', 'Workplace', 'Disaster/Emergency', 'Community Events', 'Travel', 'Other'] },
+            { id: 'Q20_Suggestions', type: 'textarea', question: '20. Please provide any suggestions or additional features you would like to see in UGNAY.' },
+            { id: 'thanks', type: 'thanks', title: 'Thank you!', desc: 'Your responses have been saved directly to our database and will greatly help our capstone study.' }
+        ];
+
+        // --- 3. LOGIC AND RENDERING ---
+        let currentIdx = 0;
+        let answers = {};
+
+        function updateProgress() {
+            const bar = document.getElementById('progressBar');
+            const percentage = (currentIdx / (surveyData.length - 1)) * 100;
+            bar.style.width = `${percentage}%`;
+        }
+
+        function render() {
+            const q = surveyData[currentIdx];
+            const app = document.getElementById('app');
+            let html = `<div class="fade-in w-full max-w-2xl mx-auto pb-16">`;
+
+            if (q.section) {
+                html += `<div class="text-xs font-bold tracking-widest text-zinc-400 uppercase mb-6">${q.section}</div>`;
+            }
+
+            if (q.type === 'info') {
+                html += `<h1 class="text-3xl md:text-4xl font-bold mb-6 tracking-tight">${q.title}</h1>
+                  <p class="text-lg text-zinc-500 mb-10 leading-relaxed">${q.desc}</p>
+                  <button onclick="nextStep()" class="bg-black text-white px-8 py-3 rounded-lg font-medium hover:bg-zinc-800 transition-colors flex items-center gap-3">
+                    ${q.buttonText} <span class="text-xs border border-zinc-600 px-1.5 py-0.5 rounded text-zinc-400">Enter ↵</span>
+                  </button>`;
+            } else if (q.type === 'thanks') {
+                html += `<div class="text-center mt-20"><h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight">${q.title}</h1>
+                  <p class="text-xl text-zinc-500">${q.desc}</p></div>`;
+            } else {
+                html += `<h2 class="text-2xl md:text-3xl font-semibold mb-8 leading-snug">${q.question}</h2>`;
+
+                if (q.type === 'radio' || q.type === 'checkbox') {
+                    html += `<div class="flex flex-col gap-3">`;
+                    q.options.forEach((opt, i) => {
+                        const isOther = opt.toLowerCase() === 'other';
+                        const letter = String.fromCharCode(65 + i);
+
+                        // Check if previously selected to maintain state if user clicks "Prev"
+                        const isSelected = q.type === 'radio'
+                            ? answers[q.id] === opt
+                            : (answers[q.id] && answers[q.id].includes(opt));
+
+                        const activeClass = isSelected ? 'border-black bg-zinc-100' : 'border-zinc-200';
+                        const showOther = (isOther && isSelected) ? 'block' : 'hidden';
+                        const otherVal = answers[`${q.id}_other`] || '';
+
+                        html += `<div class="relative">
+                          <button id="btn-${q.id}-${i}" onclick="toggleOption('${q.id}', '${opt}', '${q.type}', ${i}, ${isOther}, ${q.max || 0})"
+                                  class="w-full text-left border-2 ${activeClass} p-4 rounded-xl hover:border-black transition-colors flex items-center gap-4 outline-none">
+                              <span class="border border-zinc-300 text-xs px-2 py-1 rounded-md text-zinc-500 bg-white">${letter}</span>
+                              <span class="text-lg font-medium">${opt}</span>
+                          </button>
+                          ${isOther ? `<input type="text" id="other-input-${q.id}" value="${otherVal}" placeholder="Please specify..." class="${showOther} w-full mt-3 border-b-2 border-zinc-300 focus:border-black outline-none py-2 text-lg bg-transparent transition-all" onkeyup="updateOther('${q.id}')">` : ''}
+                        </div>`;
+                    });
+                    html += `</div>`;
+                } else if (q.type === 'likert') {
+                    html += `<div class="flex flex-wrap gap-4 mt-6">`;
+                    ['1', '2', '3', '4', '5'].forEach(val => {
+                        const isSelected = answers[q.id] === val;
+                        const activeClass = isSelected ? 'border-black bg-zinc-100' : 'border-zinc-200 bg-white';
+                        html += `<button id="btn-${q.id}-${val}" onclick="toggleOption('${q.id}', '${val}', 'radio', '${val}', false)"
+                                class="w-14 h-14 md:w-16 md:h-16 text-2xl font-bold border-2 ${activeClass} rounded-xl hover:border-black transition-colors flex justify-center items-center outline-none">
+                          ${val}
+                        </button>`;
+                    });
+                    html += `</div>
+                     <div class="flex justify-between text-sm text-zinc-400 mt-4 max-w-[370px]">
+                        <span>1 - Strongly Disagree</span>
+                        <span>5 - Strongly Agree</span>
+                     </div>`;
+                } else if (q.type === 'textarea') {
+                    const val = answers[q.id] || '';
+                    html += `<textarea id="input-${q.id}" rows="4" placeholder="Type your answer here..." class="w-full border-b-2 border-zinc-300 focus:border-black outline-none py-2 text-xl bg-transparent resize-none">${val}</textarea>`;
+                }
+
+                const isLast = (currentIdx === surveyData.length - 2);
+                html += `<div class="mt-10 flex items-center gap-4">
+                    <button onclick="nextStep()" class="bg-black text-white px-8 py-3 rounded-lg font-medium hover:bg-zinc-800 transition-colors">
+                      ${isLast ? 'Submit Survey' : 'OK ✓'}
+                    </button>
+                    <span class="text-xs text-zinc-400">press Enter ↵</span>
+                  </div>`;
+            }
+
+            html += `</div>`;
+            app.innerHTML = html;
+            updateProgress();
+            window.scrollTo(0, 0);
+        }
+
+        function toggleOption(qId, val, type, index, isOther, maxSelect) {
+            if (type === 'radio') {
+                answers[qId] = val;
+                document.querySelectorAll(`[id^="btn-${qId}"]`).forEach(el => el.classList.remove('border-black', 'bg-zinc-100'));
+                document.getElementById(`btn-${qId}-${index}`).classList.add('border-black', 'bg-zinc-100');
+
+                if (isOther) {
+                    const input = document.getElementById(`other-input-${qId}`);
+                    input.classList.remove('hidden');
+                    input.classList.add('block');
+                    input.focus();
+                } else {
+                    const otherInput = document.getElementById(`other-input-${qId}`);
+                    if (otherInput) {
+                        otherInput.classList.remove('block');
+                        otherInput.classList.add('hidden');
+                    }
+                }
+            } else if (type === 'checkbox') {
+                if (!answers[qId]) answers[qId] = [];
+                const arr = answers[qId];
+                const btn = document.getElementById(`btn-${qId}-${index}`);
+
+                if (arr.includes(val)) {
+                    answers[qId] = arr.filter(item => item !== val);
+                    btn.classList.remove('border-black', 'bg-zinc-100');
+                    if (isOther) {
+                        document.getElementById(`other-input-${qId}`).classList.remove('block');
+                        document.getElementById(`other-input-${qId}`).classList.add('hidden');
+                    }
+                } else {
+                    if (maxSelect > 0 && arr.length >= maxSelect) {
+                        alert(`You can only select up to ${maxSelect} options.`);
+                        return;
+                    }
+                    arr.push(val);
+                    btn.classList.add('border-black', 'bg-zinc-100');
+                    if (isOther) {
+                        const input = document.getElementById(`other-input-${qId}`);
+                        input.classList.remove('hidden');
+                        input.classList.add('block');
+                        input.focus();
+                    }
+                }
+            }
+        }
+
+        function updateOther(qId) {
+            answers[`${qId}_other`] = document.getElementById(`other-input-${qId}`).value;
+        }
+
+        function nextStep() {
+            const q = surveyData[currentIdx];
+            if (q.type === 'textarea') {
+                answers[q.id] = document.getElementById(`input-${q.id}`).value;
+            }
+
+            if (currentIdx === surveyData.length - 2) {
+                submitData();
+            } else if (currentIdx < surveyData.length - 1) {
+                currentIdx++;
+                render();
+            }
+        }
+
+        function prevStep() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                render();
+            }
+        }
+
+        function submitData() {
+            currentIdx++;
+            render();
+
+            // Format data for spreadsheet
+            let finalData = {};
+            for (let key in answers) {
+                if (Array.isArray(answers[key])) {
+                    finalData[key] = answers[key].join(', ');
+                } else {
+                    finalData[key] = answers[key];
+                }
+            }
+
+            // Clean up "Other" text fields
+            Object.keys(finalData).forEach(k => {
+                if (k.endsWith('_other')) {
+                    const baseKey = k.replace('_other', '');
+                    if (finalData[baseKey] && finalData[baseKey].includes('Other')) {
+                        finalData[baseKey] = finalData[baseKey].replace('Other', `Other (${finalData[k]})`);
+                    }
+                    delete finalData[k];
+                }
+            });
+
+            fetch(DATABASE_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(finalData)
+            }).catch(console.error);
+        }
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const tagName = e.target.tagName.toLowerCase();
+                if (tagName === 'textarea') return; // Allow multiline typing in textareas
+                e.preventDefault();
+                nextStep();
+            }
+        });
+
+        // Initialize
+        render();
+    </script>
+</body>
+
+</html>
